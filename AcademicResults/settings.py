@@ -77,7 +77,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'AcademicResults.wsgi.application'
 
 CRONJOBS = [
-    ('5 8 * * 0', 'getdatabase_fromInspire.main')
+    ('0 */6 * * *', 'getdatabase_fromInspire.main')
 ]
 
 #CRONTAB_COMMAND_SUFFIX = '>> /Users/jgleyzes/Documents/My_Django_stuff/AcademicResults/errorcron.log 2>&1'
