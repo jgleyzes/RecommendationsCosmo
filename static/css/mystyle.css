@@ -1,0 +1,70 @@
+#home{
+  margin-top: 25px;
+  text-align: center;
+  background-color: transparent;
+}
+
+.jumbotron{
+  margin-top: 5px;
+  text-align: center;
+  background-color: rgba(204, 203, 201,0.95);
+
+  &.light{
+  margin-top: 5px;
+  text-align: center;
+  background-color: transparent;
+
+}
+
+}
+
+.topright {
+    float: right;
+}
+.articles_authors {
+    float: left;
+    text-align: left;
+}
+
+
+#search_form{
+   background-image: url('../images/eugenio-mazzone-190204-unsplash.jpg');
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+
+}
+
+#author_page{
+   background-image: url('../images/nasa-63032-unsplashlight.jpg');
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+
+}
+
+#search_result{
+   background-image: url('../images/malte-baumann-82231-unsplash.jpg');
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+
+}
+
+#article_page{
+   background-image: url('../images/annie-spratt-147610-unsplash.jpg');
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+
+}
+
+
+.navbar-nav {
+  width: 100%;
+  text-align: center;
+  > li {
+    float: none;
+    display: inline-block;
+  }
+}

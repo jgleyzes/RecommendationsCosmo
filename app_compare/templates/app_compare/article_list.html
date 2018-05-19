@@ -1,0 +1,10 @@
+
+{% extends "base.html" %}
+{% block body_block %}
+<h1>Welcome to a list of all the articles</h1>
+<ol>
+  {% for article in articles%}
+  <p><li> <a href="{% url 'app_compare:article_detail' slug=article.recid%}">{{article.title}}</a> </li></p>
+    {%endfor%}
+</ol>
+  {%endblock%}

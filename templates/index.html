@@ -1,0 +1,14 @@
+
+{% extends "base.html" %}
+{% block body_block %}
+<div class="jumbotron">
+  <h3>Enter the name of a cosmologist (in the format "Lastname FirstletterFirstname", e.g. Ferreira P)</h3>
+  <div class="container">
+    <form method="GET">
+      {{form.as_p}}
+      {% csrf_token%}
+      <input type="submit" class="btn btn-primary" value="Get Recommendation">
+    </form>
+
+</div>
+  {%endblock%}

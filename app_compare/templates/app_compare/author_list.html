@@ -1,0 +1,10 @@
+
+{% extends "base.html" %}
+{% block body_block %}
+<h1>Welcome to a list of all the authors</h1>
+<ol>
+  {% for author in authors%}
+  <p><li> <a href="{% url 'app_compare:author_detail' pk=author.pk%}">{{author.name}}</a> </li></p>
+    {%endfor%}
+</ol>
+  {%endblock%}
