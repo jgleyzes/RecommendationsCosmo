@@ -14,9 +14,11 @@ import os
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 TEMPLATE_DIR = os.path.join(BASE_DIR,'templates')
 STATIC_DIR = os.path.join(BASE_DIR,'static')
 STATIC_DIR_boot = os.path.join(BASE_DIR,'static/bootstrap')
+STATIC_ROOT = os.path.join(PROJECT_ROOT, 'staticfiles')
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.0/howto/deployment/checklist/
 
@@ -24,7 +26,7 @@ STATIC_DIR_boot = os.path.join(BASE_DIR,'static/bootstrap')
 SECRET_KEY = '#j@%nvjuphh&=g0c+ihmlt5$kj__7cml=vp-7sg9-4r_$--hjn'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = []
 
@@ -129,5 +131,6 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATICFILES_STORAGE = 'whitenoise.django.GzipManifestStaticFilesStorage'
 STATICFILES_DIRS = [
-    STATIC_DIR
+    STATIC_DIR,
+    os.path.join(PROJECT_ROOT, 'static')
     ]
