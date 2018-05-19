@@ -1,5 +1,5 @@
 from django.contrib import admin
-from app_compare.models import Article,Author
+from app_compare.models import Article,Author,Suggestions,Tags
 # Register your models here.
 
 @admin.register(Author)
@@ -14,3 +14,5 @@ class AuthorAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Article)
+admin.site.register(Suggestions)
+admin.site.register(Tags)
