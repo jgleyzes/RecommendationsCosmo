@@ -24,7 +24,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # See https://docs.djangoproject.com/en/2.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '#j@%nvjuphh&=g0c+ihmlt5$kj__7cml=vp-7sg9-4r_$--hjn'
+SECRET_KEY = 
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
@@ -42,8 +42,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'app_compare',
-    'django_crontab',
-    'bootstrap4'
 ]
 
 MIDDLEWARE = [
@@ -76,9 +74,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'AcademicResults.wsgi.application'
 
-CRONJOBS = [
-    ('0 */6 * * *', 'getdatabase_fromInspire.main')
-]
 
 #CRONTAB_COMMAND_SUFFIX = '>> /Users/jgleyzes/Documents/My_Django_stuff/AcademicResults/errorcron.log 2>&1'
 
@@ -135,6 +130,3 @@ STATICFILES_DIRS = [
     STATIC_DIR,
     os.path.join(BASE_DIR, 'static')
     ]
-
-import django_heroku
-django_heroku.settings(locals())
