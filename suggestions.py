@@ -38,14 +38,19 @@ def get_df_nouns_only(entry):
     ------
     sentence_nouns_only: a string with only the nouns of the abstract
     """
-
-    tokens = nltk.word_tokenize( re.sub('\w*\d+\w*','',re.sub('\$.*?\$','',entry)))
-    tagged = nltk.pos_tag(tokens)
-    first_letter = np.array([x[0] for x in np.array(tagged)[:,1]])
-
-    sentence_nouns_only = ' '.join(np.array(tagged)[first_letter=='N'][:,0])
+    if entry == '':
+        sentence_nouns_only = ''
+    else:
+        tokens = nltk.word_tokenize( re.sub('\w*\d+\w*','',re.sub('\$.*?\$','',entry)))
+        tagged = nltk.pos_tag(tokens)
+        first_letter = np.array([x[0] for x in np.array(tagged)[:,1]])
+        sentence_nouns_only = ' '.join(np.array(tagged)[first_letter=='N'][:,0])
 
     return sentence_nouns_only
+
+
+
+    
 
 
 def dummy_fun(doc):
@@ -107,19 +112,19 @@ def prepare_series_text_split(series):
     The cleaned series
     """
 
-    series_text = series.str.replace('\Wm\w\W','')\
+    series_text = series.str.replace(r'<inline-formula>.*?</inline-formula>','')\
                                 .str.lower()\
-                                .str.replace('mml','')\
-                                .str.replace('math display','')\
-                                .str.replace('math formula','')\
-                                .str.replace('inline','')\
                                 .map(get_df_nouns_only)\
                                 .str.translate(remove_punctuation)\
                                 .str.translate(remove_numbers)\
+                                .str.replace('\W\w\W','')\
                                 .map(lambda x:unidecode.unidecode(x))\
                                 .str.split()\
                                 .map(lambda entry: [w for w in entry if not w in stop_words])
-
+    
+    lengthvectors = np.array([len(x) for x in series_text])
+    
+    series_text = series_text[lengthvectors>0]
     return series_text
 
 
@@ -168,7 +173,7 @@ def prepare_for_kmeans(df):
     bigram_transformer = gensim.models.Phrases(df_text_abstract_split, min_count=1, threshold=2, delimiter=b' ')
     text_with_bigrams = bigram_transformer[df_text_abstract_split.values.tolist()]
 
-    model = gensim.models.Word2Vec(text_with_bigrams, size=64, window=8, min_count=5, workers=4)
+    model = gensim.models.Word2Vec(text_with_bigrams, size=64, window=8, min_count=1, workers=4)
     word2vec = model.wv
 
     tvec_full = TfidfVectorizer(analyzer='word',

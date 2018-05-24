@@ -27,6 +27,14 @@
 }
 
 
+#about_page{
+   background-image: url('../images/stefan-stefancik-106115-unsplash.jpg');
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+
+}
+
 #search_form{
    background-image: url('../images/eugenio-mazzone-190204-unsplash.jpg');
   background-repeat: no-repeat;
