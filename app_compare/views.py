@@ -32,10 +32,17 @@ def search(request):
                       {'authors': authors,'magic_url': request.get_full_path()})
     elif 'qarticle' in request.GET:
 
-        name = request.GET['qarticle']
+        query = request.GET['qarticle']
 
-        articles_list = Article.objects.filter(title__icontains=name)
-        paginator = Paginator(articles_list, 25)
+        words_query = query.split()
+
+        articles_list_full = Article.objects.filter(title__icontains=words_query[0])
+        for words in words_query:
+
+            articles_list = Article.objects.filter(title__icontains=words)
+            articles_list_full = list(set(articles_list_full) & set(articles_list))
+
+        paginator = Paginator(articles_list_full, 25)
         page = request.GET.get('page')
 
         articles = paginator.get_page(page)
