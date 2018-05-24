@@ -19,6 +19,7 @@ from app_compare import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('',views.search_form,name='search'),
+    path('about/',views.AboutView.as_view(),name='about'),
     path(r'search/', views.search,name='searchresult'),
     path('app_compare/',include('app_compare.urls',namespace='app_compare')),
     #path('search/', views.search, name='search')

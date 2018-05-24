@@ -9,6 +9,11 @@
 
 <div class="jumbotron">
   <h2>{{article_details.title}}</h2>
+  {% if article_details.arXiv_link != 'N/A' %}
+  <h3><a href="{{article_details.arXiv_link}}">Link to arXiv page</a></h3>
+  {%endif%}
+  <h3><a href="{{article_details.get_inspire_link}}">Link to Inspire-hep page</a></h3>
+
 
 </div>
 
@@ -46,7 +51,7 @@
     {% endfor %}
     <p class="card-text">Publication date: {{article_details.creation_date}}</p>
     <p class="card-text">Total number of citations: {{article_details.citation_count}}</p>
-    <p class="card-text"><a href="{{article_details.get_inspire_link}}">Link to Inspire-hep page</a></p>
+
 
   </div>
 </div>

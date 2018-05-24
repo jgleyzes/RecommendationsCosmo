@@ -48,6 +48,9 @@ def search(request):
         message = 'You submitted an empty form.'
         return HttpResponse(message)
 
+class AboutView(TemplateView):
+    template_name = "about.html"
+
 class AuthorListView(ListView):
     model = models.Author
     context_object_name = 'authors'

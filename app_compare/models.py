@@ -83,6 +83,7 @@ class Article(models.Model):
     suggestion = models.ManyToManyField(Suggestions)
     tags = models.ManyToManyField(Tags)
     slug = models.SlugField(blank=True)
+    arXiv_link = models.TextField(blank=True)
 
 
     def get_inspire_link(self):
