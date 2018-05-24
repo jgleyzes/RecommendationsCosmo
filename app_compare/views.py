@@ -36,11 +36,15 @@ def search(request):
 
         words_query = query.split()
 
-        articles_list_full = Article.objects.filter(title__icontains=words_query[0])
-        for words in words_query:
 
-            articles_list = Article.objects.filter(title__icontains=words)
-            articles_list_full = list(set(articles_list_full) & set(articles_list))
+        if len(words_query)==0:
+            articles_list_full = Article.objects.filter(title__icontains=query)
+        else:
+            articles_list_full = Article.objects.filter(title__icontains=words_query[0])
+            for words in words_query:
+
+                articles_list = Article.objects.filter(title__icontains=words)
+                articles_list_full = list(set(articles_list_full) & set(articles_list))
 
         paginator = Paginator(articles_list_full, 25)
         page = request.GET.get('page')
