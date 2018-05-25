@@ -102,12 +102,18 @@ def get_arXiv_number_entry(entry):
     if type(entry['system_control_number']) == list:
         for dictionary in entry['system_control_number']:
             if dictionary['institute'] == 'arXiv':
-                value = dictionary['value']
-                arXiv_number = value.split(':')[-1]
+                values = dictionary.values()
+                for value in values:
+                    if 'arXiv.org' in value:
+
+                        arXiv_number = value.split(':')[-1]
     else:
         if 'arXiv' in entry['system_control_number'].keys():
-            value = dictionary['value']
-            arXiv_number = value.split(':')[-1]
+            values = dictionary.values()
+            for value in values:
+                if 'arXiv.org' in value:
+
+                    arXiv_number = value.split(':')[-1]
 
 
 
@@ -194,7 +200,10 @@ def prepare_df_clean(df):
         if type(entry['title']) == list:
             df_final.loc[recid,'title'] = entry['title'][0]['title']
         else:
-            df_final.loc[recid,'title'] = entry['title']['title']
+            try:
+                df_final.loc[recid,'title'] = entry['title']['title']
+            except:
+                raise Exception(str(recid))
 
         # Abstract
         if type(entry['abstract']) == list:
