@@ -286,9 +286,9 @@ def main():
         full_title = add_nameanddate_title(list_authors,creation_date,title)
 
 
-        new_article = Article.objects.get_or_create(title=full_title,recid=recid,abstract=abstract,
-                                                   creation_date=creation_date,citation_count=citation_count,arXiv_link=arXiv_link,
-                                                   slug=recid
+        new_article = Article.objects.get_or_create(recid=recid,defaults={'title':full_title,'abstract':abstract,
+                                                   'creation_date':creation_date,'citation_count':citation_count,'arXiv_link':arXiv_link,
+                                                   'slug':recid}
                                                    )[0]
 
 
@@ -326,8 +326,8 @@ def main():
 
             full_title_sug = add_nameanddate_title(list_authors_sug,creation_date_sug,title_sug)
 
-            new_suggestion = Suggestions.objects.get_or_create(title=full_title_sug,recid=suggestion,
-                                                       slug=suggestion)[0]
+            new_suggestion = Suggestions.objects.get_or_create(recid=suggestion,defaults={'title':full_title_sug,
+                                                       'slug':suggestion})[0]
             new_suggestion.save()
             new_article.suggestion.add(new_suggestion)
             new_suggestion.article_set.add(new_article)
