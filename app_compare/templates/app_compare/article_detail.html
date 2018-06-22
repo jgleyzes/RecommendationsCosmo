@@ -51,6 +51,11 @@
     {% endfor %}
     <p class="card-text">Publication date: {{article_details.creation_date}}</p>
     <p class="card-text">Total number of citations: {{article_details.citation_count}}</p>
+    <p class="card-text">Keywords:
+      {%for tag in article_details.tags.all%}
+      {{tag.nametag}} 
+      {% endfor %}
+       <a href="{% url 'app_compare:graph'%}">(What is this?)</a></p>
 
 
   </div>

@@ -29,8 +29,22 @@ A powerful way to vectorize sentences is through the use of word embeddings, suc
 corpus in a relatively low dimensional space, while keeping similarities between words: the classical example is that, in the vector space, one typically has Vector(King)-Vector(Man)+Vector(Woman) = Vector(Queen).
 In the present case, we use the implementation of word2vec in the gensim library for python. More specifically, we use word2vec for the words in the sentences of the abstract. To associate a vector to the full abstract,
 we take the mean of the word vectors, weighted by the inverse document frequency (<a href="https://en.wikipedia.org/wiki/Tf%E2%80%93idf">IDF</a>), to give more importance to words that are specific to the abstract.
-Then, we use a K-means clustering algorithm to regroup articles that are similar. The final step is to take the 5 suggestions which are closest to the article, according to their cosine similarity. </p> 
+Then, we say two articles are connected if they are in the 5% most similar, and for a given article, we recommend the 5 most similar.
 </div>
+<div class="jumbotron">
+  <h3> What about this network representation? </h3>
+  <p>These connections between article and recommendations create a graph where the nodes are the articles.
+  This allows to group them in clusters using what's know as markov clustering. Essentially, it regroups articles which
+  are more connected together than with the rest of the graph (see <a href="https://micans.org/mcl/">this website</a> for more details).
+  Then, we look at those clusters, how they are connected to each other, and what they represent. For example, one can extract the
+  most frequent words in the title of a cluster's articles to get an idea of the main theme of the cluster.
+  You can find this information (and more) <a class="navbar-link" href="{% url 'app_compare:graph'%}">here</a>. The graph is interactive,
+  so be sure to play around with it!</p>
+
+ </div>
+
+
+
 <div class="jumbotron">
 
 

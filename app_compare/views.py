@@ -6,16 +6,26 @@ from django.views.generic import (View,TemplateView,
 from app_compare import models
 from django.urls import reverse_lazy
 from app_compare import forms
-from django.http import HttpResponse
+from django.http import HttpResponse,JsonResponse
 from app_compare.models import Author,Article,Suggestions
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
-
-
+import json
+from django.conf import settings
+import os
+f = os.path.join( settings.BASE_DIR, 'data/datalabels.json' )
 # Create your views here.
 
 
 def search_form(request):
     return render(request, 'search_form.html')
+
+def graph_json(request):
+    datajson = open(f)
+    datajson = json.load(datajson)
+    return JsonResponse(datajson,safe=False)
+
+def graph_label(request):
+    return render(request, 'app_compare/graph_label.html')
 
 
 def search(request):

@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+{% block body_block %}
+{% load staticfiles%}
+    <head>
+        <meta charset="utf-8">
+        <style>
+          /* body {line-height: 160%; font-size: 12px;  margin: 2; } */
+          path.link {
+            fill: none;
+            stroke-width: 2px;
+          }
+          .node:not(:hover) .nodetext {
+            display: none;
+          }
+          /* h1 { font-size: 36px; margin: 10px 0; text-transform: uppercase; font-weight: normal;}
+          h2, h3 { font-size: 18px; margin: 5px 0 ; font-weight: normal;} */
+
+        </style>
+    </head>
+    <body id="graph_page">
+
+
+<div class="container">
+<div class="jumbotron" >
+  <h2>Summary representation of articles network</h2>
+
+<p>The fact that each article is linked to other articles through recommendations can be seen as a graph: the nodes are the articles, with an edge
+connecting them if one is recommended for the other. One can then look for clusters of articles within this graph (that is, articles that are more connected together than with the rest of the graph)
+using an algorithm knows as Markov clustering (see <a href="https://micans.org/mcl/">this website</a> for details).</p>
+<br>
+<p>It would be tedious to look through the full graph. Below is a summary graph, where articles within the same cluster have been regrouped (the size of the circle indicates the size of the group). The links between
+the groups represent how strongly articles of one group are recommend for the other (wider means stronger connections). If you hover you mouse over a circle, you will highlight its connections to other circles.
+By clicking on the circle, you can see more information about the group, such as its most well-known articles.</p>
+</div>
+</div>
+<div class="container">
+
+
+<div class="jumbotron" id="jumbosvg">
+
+
+<div class="card">
+  <div class="card-body" id="infogroup">
+
+  </div>
+</div>
+<!-- <div  style='text-align: center;' align:'center'  id="infogroup">
+</div> -->
+<div class="container"  >
+
+
+
+
+          <script>
+          // dimensions
+          var width = 800;
+          var height = 700;
+
+          var margin = {
+              top: 10,
+              bottom: 10,
+              left: 10,
+              right: 10,
+          }
+
+          // create an svg to draw in
+          var svg = d3.select("#jumbosvg")
+              .append("svg")
+              .attr("width", width)
+              .attr("height", height)
+              .append('g')
+              .attr('transform', 'translate(' + margin.top + ',' + margin.left + ')');
+
+          width = width - margin.left - margin.right;
+          height = height - margin.top - margin.bottom;
+          var color = d3.scaleOrdinal(d3.schemeCategory10);
+
+          var simulation = d3.forceSimulation()
+              // pull nodes together based on the links between them
+              .force("link", d3.forceLink().id(function(d) {
+                  return d.id;
+              })
+              .strength(0.015))
+              // push nodes apart to space them out
+              .force("charge", d3.forceManyBody().strength(-700))
+              // add some collision detection so they don't overlap
+              .force("collide", d3.forceCollide().radius(5))
+              // and draw them around the centre of the space
+              .force("center", d3.forceCenter(width/2, height/2 ));
+
+          // load the graph
+          d3.json("datalabels.json", function(error, graph) {
+              // set the nodes
+              var nodes = graph.nodes;
+              // links between nodes
+              var links = graph.links;
+
+              // add the curved links to our graphic
+              var link = svg.selectAll(".link")
+                  .data(links)
+                  .enter()
+                  .append("path")
+                  .attr("class", "link")
+                  .style("stroke-width", function(d) { return 2*Math.sqrt(d.value); })
+                  .style('stroke', "#ddd");
+
+              // add the nodes to the graphic
+              var node = svg.selectAll(".node")
+                  .data(nodes)
+                  .enter().append("g")
+                  .call(d3.drag()
+                    .on("start", dragstarted)
+                    .on("drag", dragged)
+                    .on("end", dragended));
+
+                  function dragstarted(d) {
+                    if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+                    d.fx = d.x;
+                    d.fy = d.y;
+                  }
+
+                  function dragged(d) {
+                    d.fx = d3.event.x;
+                    d.fy = d3.event.y;
+                  }
+
+                  function dragended(d) {
+                    if (!d3.event.active) simulation.alphaTarget(0);
+                    d.fx = null;
+                    d.fy = null;
+                  }
+
+              // a circle to represent the node
+              node.append("circle")
+                  .attr("class", "node")
+                  .attr("r", function(d) {
+                      return Math.sqrt(d.size)+15;
+                  })
+                  .attr("fill", function(d) {
+                      return color(d.group);
+                  })
+                  .on("mouseover", mouseOver(.2))
+                  .on("mouseout", mouseOut)
+
+
+                  var i;
+                  for (i = 0; i < nodes[0].info.length; i++) {
+                  node.append("text")
+
+                    .attr("dy", (1.7*i+1)+"em")
+                    .attr("dx", 0.5*(1.5*i+4)+"em")
+                    .text(function(d){return d.info[i].text})
+                    .style('font-size',function(d){return 5*d.info[i].size+10+"px"})
+                    .style("fill", function(d){return color(d.group)});
+
+                  }
+              // Variable to keep track of whether node has been clicked
+              var tip;
+
+              // Remove text if already clicked
+              node.on("click", function(){
+                      if (tip) tip.remove();
+                      // if (tip2) tip2.remove();
+                    });
+
+              // Action when clicked
+              node.on("click", function(d){
+                      d3.event.stopPropagation();
+
+                       // if (tip) tip.remove();
+
+
+                      // tip  = svg.append("g")
+                      //   .attr("transform", "translate(" + d.x  + "," + d.y + ")");
+
+
+                      // Adds description top right corner
+
+                      tip = d3.select('body')
+                     .select('#infogroup')
+                      .text('This is group ' + d.group + ', whose keywords are')
+                      ;
+                      //
+
+
+                      var html_to_add = []
+
+                      html_to_add.push('<h2 class="card-title" style=" font-size:150%;color:' + color(d.group) + '">This group contains ' + (d.size ) + ' articles, the most well-known being </h2>')
+
+                      var i;
+                      for (i = 0; i < d.infotopn.length; i++) {
+                        var recid = d.infotopn[i].recid
+                         var url_article = "{% url 'app_compare:article_detail' slug=12345 %}".replace(/12345/,recid.toString())
+                         html_to_add.push(' <p class="card-text" style="font-size:150%;"> <a href= '+ url_article + ' >'  + d.infotopn[i].title + "</a> </p>");
+                              };
+
+                       tip.html(html_to_add.join(' '))
+
+
+
+
+
+           });
+
+
+              // add the nodes to the simulation and
+              // tell it what to do on each tick
+              simulation
+                  .nodes(nodes)
+                  .on("tick", ticked);
+
+              // add the links to the simulation
+              simulation
+                  .force("link")
+                  .links(links);
+
+              // on each tick, update node and link positions
+              function ticked() {
+                  link.attr("d", positionLink);
+                  node.attr("transform", positionNode);
+              }
+
+              // links are drawn as curved paths between nodes,
+              // through the intermediate nodes
+              function positionLink(d) {
+                  var offset = 30;
+
+                  var midpoint_x = (d.source.x + d.target.x) / 2;
+                  var midpoint_y = (d.source.y + d.target.y) / 2;
+
+                  var dx = (d.target.x - d.source.x);
+                  var dy = (d.target.y - d.source.y);
+
+                  var normalise = Math.sqrt((dx * dx) + (dy * dy));
+
+                  var offSetX = midpoint_x + offset*(dy/normalise);
+                  var offSetY = midpoint_y - offset*(dx/normalise);
+
+                  return "M" + d.source.x + "," + d.source.y +
+                      "S" + offSetX + "," + offSetY +
+                      " " + d.target.x + "," + d.target.y;
+              }
+
+              // move the node based on forces calculations
+              function positionNode(d) {
+                  // keep the node within the boundaries of the svg
+                  if (d.x < 0) {
+                      d.x = 0
+                  };
+                  if (d.y < 0) {
+                      d.y = 0
+                  };
+                  if (d.x > width) {
+                      d.x = width
+                  };
+                  if (d.y > height) {
+                      d.y = height
+                  };
+                  return "translate(" + d.x + "," + d.y + ")";
+              }
+
+              // build a dictionary of nodes that are linked
+              var linkedByIndex = {};
+              links.forEach(function(d) {
+                  linkedByIndex[d.source.index + "," + d.target.index] = 1;
+              });
+
+              // check the dictionary to see if nodes are linked
+              function isConnected(a, b) {
+                  return linkedByIndex[a.index + "," + b.index] || linkedByIndex[b.index + "," + a.index] || a.index == b.index;
+              }
+
+              // fade nodes on hover
+              function mouseOver(opacity) {
+                  return function(d) {
+                      // check all other nodes to see if they're connected
+                      // to this one. if so, keep the opacity at 1, otherwise
+                      // fade
+                      node.style("stroke-opacity", function(o) {
+                          thisOpacity = isConnected(d, o) ? 1 : opacity;
+                          return thisOpacity;
+                      });
+                      node.style("fill-opacity", function(o) {
+                          thisOpacity = isConnected(d, o) ? 1 : opacity;
+                          return thisOpacity;
+                      });
+                      // also style link accordingly
+                      link.style("stroke-opacity", function(o) {
+                          return o.source === d || o.target === d ? 1 : opacity;
+                      });
+                      link.style("stroke", function(o){
+                          return o.source === d || o.target === d ? o.source.colour : "#ddd";
+                      });
+                  };
+              }
+
+              function mouseOut() {
+                  node.style("stroke-opacity", 1);
+                  node.style("fill-opacity", 1);
+                  link.style("stroke-opacity", 1);
+                  link.style("stroke", "#ddd");
+              }
+
+          });
+          </script>
+
+</div>
+
+</div>
+</div>
+<a style="background-color:black;color:white;text-decoration:none;padding:4px 6px;font-family:-apple-system, BlinkMacSystemFont, &quot;San Francisco&quot;, &quot;Helvetica Neue&quot;, Helvetica, Ubuntu, Roboto, Noto, &quot;Segoe UI&quot;, Arial, sans-serif;font-size:12px;font-weight:bold;line-height:1.2;display:inline-block;border-radius:3px" href="https://unsplash.com/@alvaropinot?utm_medium=referral&amp;utm_campaign=photographer-credit&amp;utm_content=creditBadge" target="_blank" rel="noopener noreferrer" title="Download free do whatever you want high-resolution photos from Alvaro Pinot"><span style="display:inline-block;padding:2px 3px"><svg xmlns="http://www.w3.org/2000/svg" style="height:12px;width:auto;position:relative;vertical-align:middle;top:-1px;fill:white" viewBox="0 0 32 32"><title>unsplash-logo</title><path d="M20.8 18.1c0 2.7-2.2 4.8-4.8 4.8s-4.8-2.1-4.8-4.8c0-2.7 2.2-4.8 4.8-4.8 2.7.1 4.8 2.2 4.8 4.8zm11.2-7.4v14.9c0 2.3-1.9 4.3-4.3 4.3h-23.4c-2.4 0-4.3-1.9-4.3-4.3v-15c0-2.3 1.9-4.3 4.3-4.3h3.7l.8-2.3c.4-1.1 1.7-2 2.9-2h8.6c1.2 0 2.5.9 2.9 2l.8 2.4h3.7c2.4 0 4.3 1.9 4.3 4.3zm-8.6 7.5c0-4.1-3.3-7.5-7.5-7.5-4.1 0-7.5 3.4-7.5 7.5s3.3 7.5 7.5 7.5c4.2-.1 7.5-3.4 7.5-7.5z"></path></svg></span><span style="display:inline-block;padding:2px 3px">Alvaro Pinot</span></a>
+    </body>
+  {%endblock%}

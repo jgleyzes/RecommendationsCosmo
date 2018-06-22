@@ -5,6 +5,8 @@
     <meta charset="utf-8">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
     <link rel="stylesheet" href="{% static  "css/mystyle.css"%}">
+    <script src="http://d3js.org/d3.v4.min.js" charset="utf-8"></script>
+    <script src="{% static  "js/d3.layout.cloud.js"%}"></script>
     <script type="text/javascript"
   src="{% static  "js/LaTeXMathML.js"%}">
   </script>
@@ -15,6 +17,7 @@
         <ul class="nav navbar-nav">
           <li><a class="active navbar-brand" href="{% url 'search'%}">Find recommendations</a></li>
           <li><a class="navbar-link" href="{% url 'about'%}">How does this work?</a></li>
+          <li><a class="navbar-link" href="{% url 'app_compare:graph'%}">Network representation</a></li>
 
           <!-- <li><a class="navbar-brand" href="{% url 'app_compare:article_list'%}">Articles</a></li>
            -->

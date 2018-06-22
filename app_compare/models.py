@@ -59,6 +59,8 @@ class Suggestions(models.Model):
         title = models.TextField(blank=True)
         recid = models.TextField(blank=True)
         slug = models.SlugField(blank=True)
+        label = models.IntegerField(blank=True)
+        strength = models.FloatField(blank=True,default=0)
         def get_inspire_link(self):
             return "https://inspirehep.net/record/"+self.recid
 
@@ -67,6 +69,8 @@ class Suggestions(models.Model):
 
 class Tags(models.Model):
     nametag = models.TextField(blank=True)
+    weight = models.FloatField(blank=True,default=1)
+    label =  models.TextField(blank=True,default=1)
 
     def __str__(self):
         return self.nametag
@@ -75,6 +79,7 @@ class Tags(models.Model):
 class Article(models.Model):
 
     title = models.TextField(blank=True)
+    label = models.IntegerField(blank=True)
     authors = models.ManyToManyField(Author)
     creation_date = models.TextField(blank=True)
     recid = models.TextField(blank=True)

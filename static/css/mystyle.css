@@ -4,6 +4,23 @@
   background-color: transparent;
 }
 
+svg {
+  width: 100%;
+}
+
+.link {
+  fill: none;
+  stroke: #ddd;
+  stroke-width: 1px;
+}
+
+.node {
+  stroke: #000;
+  stroke-width: 1px;
+}
+
+
+
 .jumbotron{
   margin-top: 5px;
   text-align: center;
@@ -37,6 +54,14 @@
 
 #search_form{
    background-image: url('../images/eugenio-mazzone-190204-unsplash.jpg');
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+
+}
+
+#graph_page{
+   background-image: url('../images/alvaro-pinot-502465-unsplash.jpg');
   background-repeat: no-repeat;
   background-size: cover;
   background-position: center;
