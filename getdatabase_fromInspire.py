@@ -231,7 +231,7 @@ def main():
     # to a given article on inspire.
 
 
-    URL_BASE = 'http://inspirehep.net/search?p=astro-ph.CO+and+hep-th&of=recjson&ot=number_of_citations,authors,title,creation_date,recid,abstract,system_control_number&'
+    URL_BASE = 'http://inspirehep.net/search?p=astro-ph.CO&of=recjson&ot=number_of_citations,authors,title,creation_date,recid,abstract,system_control_number&'
     response_json,df_res = get_json_to_df(URL_BASE+'&rg=250',df=[])
     i = 1
     while len(response_json)>=250:
@@ -288,7 +288,7 @@ def main():
 
         new_article = Article.objects.get_or_create(recid=recid,defaults={'title':full_title,'abstract':abstract,
                                                    'creation_date':creation_date,'citation_count':citation_count,'arXiv_link':arXiv_link,
-                                                   'slug':recid,'label':label}
+                                                   'slug':recid}
                                                    )[0]
 
 
@@ -322,13 +322,12 @@ def main():
             except:
                 print('Error with recid %s' %recid)
             creation_date_sug = entry['creation_date'][:10]
-            label_sug = entry['Label']
             list_authors_sug = get_authors_names_entry(df_label.loc[suggestion,'authors'])
 
             full_title_sug = add_nameanddate_title(list_authors_sug,creation_date_sug,title_sug)
 
             new_suggestion = Suggestions.objects.get_or_create(recid=suggestion,defaults={'title':full_title_sug,
-                                                       'slug':suggestion,'label':label_sug})[0]
+                                                       'slug':suggestion})[0]
             new_suggestion.save()
             new_article.suggestion.add(new_suggestion)
             new_suggestion.article_set.add(new_article)
@@ -340,6 +339,4 @@ def main():
 
 
 if __name__ == '__main__':
-    import time
-    print('running at ' + time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time())))
     main()
