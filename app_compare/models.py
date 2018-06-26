@@ -60,7 +60,9 @@ class Suggestions(models.Model):
         recid = models.TextField(blank=True)
         slug = models.SlugField(blank=True)
         label = models.IntegerField(blank=True)
-        strength = models.FloatField(blank=True,default=0)
+        strength = models.FloatField(blank=True)
+        citation_count = models.IntegerField(blank=True)
+        creation_date = models.TextField(blank=True)
         def get_inspire_link(self):
             return "https://inspirehep.net/record/"+self.recid
 

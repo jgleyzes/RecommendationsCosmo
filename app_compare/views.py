@@ -4,6 +4,7 @@ from django.views.generic import (View,TemplateView,
                                   CreateView,UpdateView,
                                   DeleteView)
 from app_compare import models
+from app_compare.documents import articleDocument
 from django.urls import reverse_lazy
 from app_compare import forms
 from django.http import HttpResponse,JsonResponse
@@ -16,8 +17,9 @@ f = os.path.join( settings.BASE_DIR, 'data/datalabels.json' )
 # Create your views here.
 
 
+
 def search_form(request):
-    return render(request, 'search_form.html')
+    return render(request, 'search/search.html')
 
 def graph_json(request):
     datajson = open(f)
@@ -26,6 +28,7 @@ def graph_json(request):
 
 def graph_label(request):
     return render(request, 'app_compare/graph_label.html')
+
 
 
 def search(request):
@@ -86,6 +89,8 @@ class AuthorDetailView(DetailView):
 
 
 
+
+
 class ArticleListView(ListView):
     model = models.Article
     context_object_name = 'articles'
@@ -95,6 +100,28 @@ class ArticleDetailView(DetailView):
     context_object_name = 'article_details'
     model = models.Article
     template_name = 'app_compare/article_detail.html'
+
+    def get_context_data(self,**kwargs):
+        context = super(ArticleDetailView, self).get_context_data(**kwargs)
+        orderby = self.request.GET.get("orderby")
+        if type(orderby) == type(None):
+            orderby = 'strength'
+        recid = self.kwargs['slug']
+        article = self.model.objects.get(recid=recid)
+        print(orderby)
+        recommendations_list_full = article.suggestion.all().order_by("-"+orderby)
+
+        print(recommendations_list_full[0].title,recommendations_list_full[0].citation_count,recommendations_list_full[0].strength)
+
+        paginator = Paginator(recommendations_list_full, 5)
+        page = self.request.GET.get('page')
+
+        recommendations = paginator.get_page(page)
+
+        context['recommendations'] = recommendations
+        context['magic_url'] = self.request.get_full_path()
+
+        return context
 
 class SuggestionsDetailView(DetailView):
     context_object_name = 'suggestions_details'

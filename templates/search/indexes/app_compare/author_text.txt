@@ -1,0 +1,4 @@
+{{object.name}}
+{% for a in object.articles.all%}
+        {{ a }}
+    {% endfor %}

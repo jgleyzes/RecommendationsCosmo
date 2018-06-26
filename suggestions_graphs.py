@@ -349,7 +349,7 @@ def get_clusters(df,inflation=1.1,p=95,ntopics=5):
 
 
 
-def get_recommendation(recid,adjacency_matrix,df_label,nrecommendations=5):
+def get_recommendation(recid,adjacency_matrix,df_label,nrecommendations=15):
 
     """
     For a given article (identified by its recid), find the nrecommendations in its cluster that are the closest

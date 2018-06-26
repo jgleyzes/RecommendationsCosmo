@@ -1,0 +1,6 @@
+{{ object.title }}
+{{ object.abstract }}
+{{ object.creation_date }}
+{% for a in object.authors.all%}
+        {{ a }}
+{% endfor %}

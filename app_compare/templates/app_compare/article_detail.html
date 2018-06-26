@@ -23,10 +23,38 @@
     <div class="jumbotron" style="border:solid 10px rgb(142, 30, 8);">
 
       <h2>Articles you may also like:</h2>
-      <br>
-      {%for suggestion in article_details.suggestion.all%}
-      <h3><a href="{% url 'app_compare:article_detail' slug=suggestion.recid%}">{{suggestion.title}}</a></h3>
-      {% endfor %}
+      {% if recommendations %}
+      <form class="" action="." method="get">
+        <div >
+            <label for="sel1">Sort by:</label>
+                <select  name='orderby' id="sel1">
+                  <option value='strength'>Similarity</option>
+                  <option value='citation_count'>Most Cited</option>
+                </select>
+                <input type="submit" class="btn btn-primary" value="Search">
+              </div>
+      </form>
+      {% for recommendation in recommendations%}
+      <h3> <a href="{% url 'app_compare:article_detail' slug=recommendation.recid%}">{{recommendation.title}}</a> </h3>
+        {%endfor%}
+      <div class="pagination">
+        <span class="step-links">
+            {% if recommendations.has_previous %}
+                <a href="?page=1">&laquo; first</a>
+                <a href="{{magic_url}}&page={{ recommendations.previous_page_number }}">previous</a>
+            {% endif %}
+
+            <span class="current">
+                Page {{ recommendations.number }} of {{ recommendations.paginator.num_pages }}.
+            </span>
+
+            {% if recommendations.has_next %}
+                <a href="{{magic_url}}&page={{ recommendations.next_page_number }}">next</a>
+                <a href="{{magic_url}}&page={{ recommendations.paginator.num_pages }}">last &raquo;</a>
+            {% endif %}
+        </span>
+      </div>
+        {% endif %}
     </div>
   </div>
 <div class="container">
@@ -53,7 +81,7 @@
     <p class="card-text">Total number of citations: {{article_details.citation_count}}</p>
     <p class="card-text">Keywords:
       {%for tag in article_details.tags.all%}
-      {{tag.nametag}} 
+      {{tag.nametag}}
       {% endfor %}
        <a href="{% url 'app_compare:graph'%}">(What is this?)</a></p>
 

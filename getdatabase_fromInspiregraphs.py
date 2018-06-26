@@ -15,7 +15,7 @@ import pandas as pd
 import numpy as np
 import unidecode
 import scipy
-
+from haystack.management.commands import update_index
 """
 This is the main code which populates the django database. It first download the information about articles from
 INSPIRE, cleans it, then apply the method in suggestions_graphs to create the recommendations, as well as an
@@ -308,7 +308,7 @@ def main():
 
 
 
-        list_suggestions = suggestions_graphs.get_recommendation(recid,adjacency_matrix,df_label,nrecommendations=5)
+        list_suggestions = suggestions_graphs.get_recommendation(recid,adjacency_matrix,df_label,nrecommendations=15)
 
         new_article.suggestion.clear()
         new_article.tags.clear()
@@ -339,11 +339,12 @@ def main():
             creation_date_sug = entry['creation_date'][:10]
             label_sug = entry['Label']
             list_authors_sug = get_authors_names_entry(df_label.loc[suggestion,'authors'])
+            citation_count_sug = entry['number_of_citations']
 
             full_title_sug = add_nameanddate_title(list_authors_sug,creation_date_sug,title_sug)
 
-            new_suggestion = Suggestions.objects.get_or_create(recid=suggestion,defaults={'title':full_title_sug,
-                                                       'slug':suggestion,'label':label_sug,'strength':strength})[0]
+            new_suggestion = Suggestions.objects.get_or_create(recid=suggestion,strength=strength,defaults={'title':full_title_sug,
+                                                       'slug':suggestion,'label':label_sug,'citation_count':citation_count_sug})[0]
             new_suggestion.save()
             new_article.suggestion.add(new_suggestion)
             new_suggestion.article_set.add(new_article)
@@ -352,7 +353,8 @@ def main():
         new_article.save()
 
     print('Populating Completed!')
-
+    update_index.Command().handle()
+    print('Index updated!')
     # Save the graph data to a JSON file to use for plotting
 
     datajson = graphdata.graph_to_json(adjacency_matrix,df_label,most_frequentwords_dict,nmostcited=3)
