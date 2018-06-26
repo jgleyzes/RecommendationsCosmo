@@ -150,10 +150,14 @@ By clicking on the circle, you can see more information about the group, such as
                     .attr("dy", (1.7*i+1)+"em")
                     .attr("dx", 0.5*(1.5*i+4)+"em")
                     .text(function(d){return d.info[i].text})
-                    .style('font-size',function(d){return 5*d.info[i].size+10+"px"})
+                    .style('font-size',function(d){return sizetext(d.info[i].size)})
                     .style("fill", function(d){return color(d.group)});
 
                   }
+                function sizetext(size){
+                  if (size == 0 ) {return 0}
+                  else {return 5*size+10+"px"}
+                }
               // Variable to keep track of whether node has been clicked
               var tip;
 
