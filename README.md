@@ -3,4 +3,4 @@ Cosmology and Nongalactic Astrophysics cross High Energy Physics - Theory on arX
 
 One can also enter the name of an author, find his publications, and find recommendations for those publications.The database is obtained from the API of https://inspirehep.net/.
 
-The recommendations are made by vectorizing the abstract of the articles using word embeddings (more precisely, word2vec from the gensim library) and then keeping the most similar articles. We also group articles using a markov clustering algorithm on the graphs of recommendations.
+The recommendations are made by vectorizing the abstract of the articles using word embeddings (more precisely, word2vec from the gensim library) and then keeping the most similar articles. We also group articles using a markov clustering algorithm on the graph of recommendations.
