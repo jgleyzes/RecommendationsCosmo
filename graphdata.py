@@ -99,7 +99,7 @@ def get_adjacency_matrix_label(adjacency_matrix,df_label):
     for i in range(nlabels):
         indices = np.array(dict_cluster_id[labels[i]])
 
-        #Need to put the indices in right shape to keep the matrix shape 
+        #Need to put the indices in right shape to keep the matrix shape
 
         indices_left = put_indice_shape_LR(indices,'L')
         indices_right = put_indice_shape_LR(indices,'R')
@@ -182,22 +182,27 @@ def graph_to_json(adjacency_matrix,df_label,most_frequentwords_dict,nmostcited=3
 
     adjacency_matrix_label = get_adjacency_matrix_label(adjacency_matrix,df_label)
 
-    #get the min distance to normalize adjacency_matrix_label
+    #get the min-max distance to normalize adjacency_matrix_label between 0 and 1
 
     min_distance = adjacency_matrix_label[adjacency_matrix_label>0].min()
+
+    max_distance = adjacency_matrix_label[adjacency_matrix_label>0].max()
+
+
 
     for i in range(nlabels):
 
         label = labels[i]
         most_frequentwords = most_frequentwords_dict[label]
 
+        #get the min-max weight to normalize weigths
         weigths = np.array([float(weight) for _,weight in most_frequentwords])
 
-        # We want the minimum non zero weight to renormalize all weigth by that amount
         minweight = weigths[weigths>0].min()
 
+        maxweight = weigths[weigths>0].max()
 
-        dictinfo = [{'text':word,'size':weight/minweight} for word,weight in most_frequentwords]
+        dictinfo = [{'text':word,'size':(weight-minweight)/(maxweight-minweight)+0.5} for word,weight in most_frequentwords]
         size = int(size_groups[label])
 
         infotopncited = get_info_topcitation(label,df_label,nmostcited=nmostcited)
@@ -208,7 +213,7 @@ def graph_to_json(adjacency_matrix,df_label,most_frequentwords_dict,nmostcited=3
         for j in range(0,i):
             if adjacency_matrix_label[i,j]>0:
 
-                value = int(round(adjacency_matrix_label[i,j]/min_distance))
+                value = int(round(30*(adjacency_matrix_label[i,j]-min_distance)/(max_distance-min_distance)))
                 link = {'source':i,'target':j,"value":value}
                 datajsonlabel['links'].append(link)
 

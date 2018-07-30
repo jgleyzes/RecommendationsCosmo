@@ -124,7 +124,6 @@ def prepare_series_text_split(series):
 
     series_text = series.str.replace(r'<inline-formula>.*?</inline-formula>','')\
                                 .str.lower()\
-                                .map(get_df_nouns_only)\
                                 .str.translate(remove_punctuation)\
                                 .str.translate(remove_numbers)\
                                 .str.replace('\W\w\W','')\
@@ -300,7 +299,7 @@ def get_adjacency_matrix(cosine_distance_matrix,p=95):
 
 
 
-def get_clusters(df,inflation=1.1,p=95,ntopics=5):
+def get_clusters(df,inflation=1.05,p=95,ntopics=5):
     """
     Takes as an input the dataframe containing articles with their abstract, vectorize it,
     then returns the label as well as coordinates of the clusters centers.

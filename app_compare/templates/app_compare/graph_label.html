@@ -101,7 +101,7 @@ By clicking on the circle, you can see more information about the group, such as
                   .enter()
                   .append("path")
                   .attr("class", "link")
-                  .style("stroke-width", function(d) { return 2*Math.sqrt(d.value); })
+                  .style("stroke-width", function(d) { return 2*(d.value+3)*(d.value+3); })
                   .style('stroke', "#ddd");
 
               // add the nodes to the graphic
@@ -155,8 +155,8 @@ By clicking on the circle, you can see more information about the group, such as
 
                   }
                 function sizetext(size){
-                  if (size == 0 ) {return 0}
-                  else {return 5*size+10+"px"}
+                  if (size <= 0 ) {return 0}
+                  else {return (5*size+10)+"px"}
                 }
               // Variable to keep track of whether node has been clicked
               var tip;

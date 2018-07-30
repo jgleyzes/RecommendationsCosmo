@@ -94,7 +94,51 @@ def get_authors_names_entry(array_author):
         list_authors.append(name)
     return list_authors
 
+def get_title_entry(entrytitle):
+    """
+    Put the title column in the right shape
 
+    Input:
+    -----
+    entrytitle: a title entry coming from the json data
+
+    Output:
+    ------
+    The actual title
+    """
+
+    if type(entrytitle) == list:
+        return entrytitle[0]['title']
+    else:
+        try:
+            return entrytitle['title']
+        except:
+            raise Exception(entrytitle)
+
+def get_abstract_entry(entryabs):
+    """
+    Put the abstract column in the right shape
+
+    Input:
+    -----
+    entryabs: a abstract entry coming from the json data
+
+    Output:
+    ------
+    The actual abstract
+    """
+    if type(entryabs) == list:
+        try:
+            arxivindex = np.argwhere([ 'arXiv' in element['number'] for element in entryabs])[0][0]
+            abstract = entryabs[arxivindex]['summary']
+        except:
+            abstract = entryabs[1]['summary']
+    else:
+        if entryabs == None:
+            abstract = ''
+        else:
+            abstract = entryabs['summary']
+    return abstract
 
 def get_arXiv_number_entry(entry):
 
@@ -206,32 +250,89 @@ def prepare_df_clean(df):
     """
 
     df_final = df.copy()
-    for recid in df.index:
-        entry = df.loc[recid]
-
-        # Title
-        if type(entry['title']) == list:
-            df_final.loc[recid,'title'] = entry['title'][0]['title']
-        else:
-            try:
-                df_final.loc[recid,'title'] = entry['title']['title']
-            except:
-                raise Exception(str(recid))
-
-        # Abstract
-        if type(entry['abstract']) == list:
-            try:
-                arxivindex = np.argwhere([ 'arXiv' in element['number'] for element in entry['abstract']])[0][0]
-                abstract = entry['abstract'][arxivindex]['summary']
-            except:
-                abstract = entry['abstract'][1]['summary']
-        else:
-            if entry['abstract'] == None:
-                abstract = ''
-            else:
-                abstract = entry['abstract']['summary']
-        df_final.loc[recid,'abstract'] = abstract
+    df_final['title'] = df_final['title'].apply(get_title_entry)
+    df_final['abstract'] = df_final['abstract'].apply(get_abstract_entry)
     return df_final
+
+def fill_Django_DB(entry,adjacency_matrix,df_label,most_frequentwords_dict):
+    recid = entry.name
+    try:
+         title = entry['title']
+    except:
+        print('Error with recid %s' %recid)
+
+    creation_date = entry['creation_date'][:10]
+    citation_count = entry['number_of_citations']
+
+    abstract = entry['abstract']
+
+    label = entry['Label']
+    most_frequentwords = most_frequentwords_dict[int(label)]
+
+    try:
+        arXiv_number =  get_arXiv_number_entry(entry)
+    except:
+        raise Exception(str(recid))
+    arXiv_link = get_arXiv_link(arXiv_number)
+
+    list_authors = get_authors_names_entry(entry['authors'])
+
+    full_title = add_nameanddate_title(list_authors,creation_date,title)
+
+
+    new_article = Article.objects.get_or_create(recid=recid,defaults={'title':full_title,'abstract':abstract,
+                                               'creation_date':creation_date,'citation_count':citation_count,'arXiv_link':arXiv_link,
+                                               'slug':recid,'label':label}
+                                               )[0]
+
+
+
+
+    list_suggestions = suggestions_graphs.get_recommendation(recid,adjacency_matrix,df_label,nrecommendations=15)
+
+    new_article.suggestion.clear()
+    new_article.tags.clear()
+
+    # Attributes tag (most frequent words for each cluster) to the article
+    for tag,weight in most_frequentwords:
+        if weight > 0:
+            new_tag = Tags.objects.get_or_create(nametag=tag,defaults={'weight':weight,'label':label})[0]
+            new_tag.save()
+            new_article.tags.add(new_tag)
+
+
+    # Attributes authors to the article
+    for author in list_authors:
+        new_author = Author.objects.get_or_create(name=author)[0]
+        new_author.save()
+        new_article.authors.add(new_author)
+        new_author.article_set.add(new_article)
+
+
+    # Attributes suggestions with their strength to the article, retaining the 5 articles closest to
+    # the one at hand according to their cosine distance in the vectorized space, provided they are close enough.
+    for suggestion,strength in list_suggestions:
+        entry_sug = df_label.loc[suggestion]
+        try:
+             title_sug = entry_sug['title']
+        except:
+            print('Error with recid %s' %recid)
+        creation_date_sug = entry_sug['creation_date'][:10]
+        label_sug = entry_sug['Label']
+        list_authors_sug = get_authors_names_entry(entry_sug['authors'])
+        citation_count_sug = entry_sug['number_of_citations']
+
+        full_title_sug = add_nameanddate_title(list_authors_sug,creation_date_sug,title_sug)
+
+        new_suggestion = Suggestions.objects.get_or_create(recid=suggestion,strength=strength,defaults={'title':full_title_sug,
+                                                   'slug':suggestion,'label':label_sug,'citation_count':citation_count_sug})[0]
+        new_suggestion.save()
+        new_article.suggestion.add(new_suggestion)
+        new_suggestion.article_set.add(new_article)
+
+
+    new_article.save()
+
 
 def main():
 
@@ -273,84 +374,8 @@ def main():
 
     #Populate the django models
 
-    for recid in df_label.index:
+    df_label.apply(lambda x:fill_Django_DB(x,adjacency_matrix,df_label,most_frequentwords_dict),axis=1)
 
-        entry = df_label.loc[recid]
-        try:
-             title = entry['title']
-        except:
-            print('Error with recid %s' %recid)
-
-        creation_date = entry['creation_date'][:10]
-        citation_count = entry['number_of_citations']
-
-        abstract = entry['abstract']
-
-        label = df_label.loc[recid,'Label']
-        most_frequentwords = most_frequentwords_dict[int(label)]
-
-        try:
-            arXiv_number =  get_arXiv_number_entry(entry)
-        except:
-            raise Exception(str(recid))
-        arXiv_link = get_arXiv_link(arXiv_number)
-
-        list_authors = get_authors_names_entry(df_label.loc[recid,'authors'])
-
-        full_title = add_nameanddate_title(list_authors,creation_date,title)
-
-
-        new_article = Article.objects.get_or_create(recid=recid,defaults={'title':full_title,'abstract':abstract,
-                                                   'creation_date':creation_date,'citation_count':citation_count,'arXiv_link':arXiv_link,
-                                                   'slug':recid,'label':label}
-                                                   )[0]
-
-
-
-
-        list_suggestions = suggestions_graphs.get_recommendation(recid,adjacency_matrix,df_label,nrecommendations=15)
-
-        new_article.suggestion.clear()
-        new_article.tags.clear()
-
-        # Attributes tag (most frequent words for each cluster) to the article
-        for tag,weight in most_frequentwords:
-            new_tag = Tags.objects.get_or_create(nametag=tag,defaults={'weight':weight,'label':label})[0]
-            new_tag.save()
-            new_article.tags.add(new_tag)
-
-
-        # Attributes authors to the article
-        for author in list_authors:
-            new_author = Author.objects.get_or_create(name=author)[0]
-            new_author.save()
-            new_article.authors.add(new_author)
-            new_author.article_set.add(new_article)
-
-
-        # Attributes suggestions with their strength to the article, retaining the 5 articles closest to
-        # the one at hand according to their cosine distance in the vectorized space, provided they are close enough.
-        for suggestion,strength in list_suggestions:
-            entry = df_label.loc[suggestion]
-            try:
-                 title_sug = entry['title']
-            except:
-                print('Error with recid %s' %recid)
-            creation_date_sug = entry['creation_date'][:10]
-            label_sug = entry['Label']
-            list_authors_sug = get_authors_names_entry(df_label.loc[suggestion,'authors'])
-            citation_count_sug = entry['number_of_citations']
-
-            full_title_sug = add_nameanddate_title(list_authors_sug,creation_date_sug,title_sug)
-
-            new_suggestion = Suggestions.objects.get_or_create(recid=suggestion,strength=strength,defaults={'title':full_title_sug,
-                                                       'slug':suggestion,'label':label_sug,'citation_count':citation_count_sug})[0]
-            new_suggestion.save()
-            new_article.suggestion.add(new_suggestion)
-            new_suggestion.article_set.add(new_article)
-
-
-        new_article.save()
 
     print('Populating Completed!')
     update_index.Command().handle()
