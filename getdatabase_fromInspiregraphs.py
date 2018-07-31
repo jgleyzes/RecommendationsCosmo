@@ -16,6 +16,7 @@ import numpy as np
 import unidecode
 import scipy
 from haystack.management.commands import update_index
+
 """
 This is the main code which populates the django database. It first download the information about articles from
 INSPIRE, cleans it, then apply the method in suggestions_graphs to create the recommendations, as well as an
@@ -254,7 +255,23 @@ def prepare_df_clean(df):
     df_final['abstract'] = df_final['abstract'].apply(get_abstract_entry)
     return df_final
 
-def fill_Django_DB(entry,adjacency_matrix,df_label,most_frequentwords_dict):
+def fill_Django_DB(entry,adjacency_matrix,df_label,most_frequentwords_dict,nrecommendations=15):
+
+    """
+    Fills the django database with entry
+
+    Input:
+    -----
+    entry: the row of the dataframe to put in the database
+    adjacency_matrix: the adjacency matrix which will allow us to choose recommendations
+    df_label: the full dataframe containing with articles and their label (this is where the recommendations will be fetched)
+    most_frequentwords_dict: the dictionary with keywords for each label.
+
+
+    """
+
+    # Prepare everything to fill the Article model
+
     recid = entry.name
     try:
          title = entry['title']
@@ -279,6 +296,7 @@ def fill_Django_DB(entry,adjacency_matrix,df_label,most_frequentwords_dict):
 
     full_title = add_nameanddate_title(list_authors,creation_date,title)
 
+    # Fills database entry corresponding to a given recid. If existing, updates the fields.
 
     new_article = Article.objects.get_or_create(recid=recid,defaults={'title':full_title,'abstract':abstract,
                                                'creation_date':creation_date,'citation_count':citation_count,'arXiv_link':arXiv_link,
@@ -286,9 +304,7 @@ def fill_Django_DB(entry,adjacency_matrix,df_label,most_frequentwords_dict):
                                                )[0]
 
 
-
-
-    list_suggestions = suggestions_graphs.get_recommendation(recid,adjacency_matrix,df_label,nrecommendations=15)
+    # Cleans old existing suggestions and tags
 
     new_article.suggestion.clear()
     new_article.tags.clear()
@@ -308,9 +324,13 @@ def fill_Django_DB(entry,adjacency_matrix,df_label,most_frequentwords_dict):
         new_article.authors.add(new_author)
         new_author.article_set.add(new_article)
 
+    # Get the suggestions for a given article
+    list_suggestions = suggestions_graphs.get_recommendation(recid,adjacency_matrix,df_label,nrecommendations=nrecommendations)
 
-    # Attributes suggestions with their strength to the article, retaining the 5 articles closest to
+
+    # Attributes suggestions with their strength to the article, retaining the nrecommendations articles closest to
     # the one at hand according to their cosine distance in the vectorized space, provided they are close enough.
+
     for suggestion,strength in list_suggestions:
         entry_sug = df_label.loc[suggestion]
         try:
@@ -327,6 +347,8 @@ def fill_Django_DB(entry,adjacency_matrix,df_label,most_frequentwords_dict):
         new_suggestion = Suggestions.objects.get_or_create(recid=suggestion,strength=strength,defaults={'title':full_title_sug,
                                                    'slug':suggestion,'label':label_sug,'citation_count':citation_count_sug})[0]
         new_suggestion.save()
+
+        # Creates manytomany relation
         new_article.suggestion.add(new_suggestion)
         new_suggestion.article_set.add(new_article)
 
@@ -334,7 +356,7 @@ def fill_Django_DB(entry,adjacency_matrix,df_label,most_frequentwords_dict):
     new_article.save()
 
 
-def main():
+def main(nmostcited=3,nrecommendations=15):
 
     """
     Combines everything and populates the django database.
@@ -361,10 +383,14 @@ def main():
     df_clean_with_abstract_and_authors = df_clean[(df_clean['abstract'] != '')&(df_clean['authors'].astype(str).ne('None'))]
     print('Database Imported!')
 
-    # Use the functions from the suggestions.py module to cluster the articles into nclust clusters.
-    # returns df_scaled which a dataframe for the vectorized representation of the abstracts
-    # df_label is the initial dataframe with a new column containing the labels.
-    # most_frequentwords_dict is a dictionary which returns the ntopics most representative words of each cluster
+    """
+    Use the functions from the suggestions_graphs.py module to group the articles into similar clusters.
+    Returns:
+    - adjacency_matrix from the graph of distances between articles
+    - df_vectorized: the dataframe with the vector representation of each article
+    - df_label: the original dataframe with an extra column indicating the cluster the article belongs to.
+    -  most_frequentwords_dict is a dictionary which returns the ntopics most representative words of each cluster
+    """
 
     adjacency_matrix,df_vectorized,df_label,most_frequentwords_dict = suggestions_graphs.get_clusters(df_clean_with_abstract_and_authors)
 
@@ -374,7 +400,7 @@ def main():
 
     #Populate the django models
 
-    df_label.apply(lambda x:fill_Django_DB(x,adjacency_matrix,df_label,most_frequentwords_dict),axis=1)
+    df_label.apply(lambda x:fill_Django_DB(x,adjacency_matrix,df_label,most_frequentwords_dict,nrecommendations=nrecommendations),axis=1)
 
 
     print('Populating Completed!')
@@ -382,7 +408,7 @@ def main():
     print('Index updated!')
     # Save the graph data to a JSON file to use for plotting
 
-    datajson = graphdata.graph_to_json(adjacency_matrix,df_label,most_frequentwords_dict,nmostcited=3)
+    datajson = graphdata.graph_to_json(adjacency_matrix,df_label,most_frequentwords_dict,nmostcited=nmostcited)
 
     print('JSON saved!')
 

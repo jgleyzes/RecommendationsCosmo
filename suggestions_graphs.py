@@ -111,7 +111,13 @@ def get_mean_vectors_idf(X,word2vec,tfidf):
 def prepare_series_text_split(series):
 
     """
-    Applies various cleaning method to the abstracts from a Series dataframe.
+    Applies various cleaning method to the abstracts from a Series dataframe:
+    - removes Latex commands
+    - puts in lowercase
+    - removes punctuation and remove_numbers
+    - decode Unicode
+    - splits into tokens
+    - removes stopwords
 
     Input:
     -----
@@ -173,8 +179,7 @@ def prepare_vector(df):
 
     """
     Applies all the method above to clean the data, trains and computes the word2vec mapping as well as the
-    TF-IDF vectorizer on the same tokens as word2vec.
-    Also applies a StandardScaler to the data to prepare for ML application.
+    TF-IDF vectorizer on the same tokens as word2vec to be able to apply get_mean_vectors_idf
     """
 
     df_text_abstract_split = prepare_series_text_split(df['abstract'])
@@ -229,6 +234,7 @@ def get_distance_matrix(df_vectorized):
 
 
 def get_stats_nodiag(cosine_distance_matrix,p=95):
+
     """
     Takes as an input the matrix M_ij = cosine_distance(entry_i,entry_j) and compute the value of the percentile "p"
     when ignoring the diagonal (which is only 1 by definition). This is because we want to keep only the connection
@@ -261,6 +267,7 @@ def get_stats_nodiag(cosine_distance_matrix,p=95):
     return (value_percentile,stdnogiag)
 
 def get_adjacency_matrix(cosine_distance_matrix,p=95):
+
     """
     We want to create graph of the articles where the weigths of the edges are given by the distance between articles
     in the vector space. We want to keep only the articles that are close enough, that is, whose distance is larger
@@ -310,6 +317,7 @@ def get_clusters(df,inflation=1.05,p=95,ntopics=5):
     inflation: parameter that enter in the clustering algorithm. Increase value for more clusters.
                default typically yield ~10 clusters.
     p: percentile for the threshold.
+    ntopics: the number of keywords for each cluster
 
     Outputs:
     ------
@@ -357,13 +365,13 @@ def get_recommendation(recid,adjacency_matrix,df_label,nrecommendations=15):
     Inputs:
     ------
     recid: the identifier of the article
+    adjacency_matrix: the adjacency matrix which contains all the distances
     df_label: the dataframe containing the data for the articles and their label
-    df_scaled: the dataframe containing the vectorized version of the abstract of each article
     nrecommendations: the number of words to represent each cluster
 
     Output:
     ------
-    most_sim_articles: an array of nrecommendations recid, sorted from most similar to least
+    recommendations: an array of nrecommendations recid, sorted from most similar to least
 
     """
 
