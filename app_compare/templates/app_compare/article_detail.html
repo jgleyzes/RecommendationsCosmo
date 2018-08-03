@@ -74,14 +74,14 @@
 
     <h2 class="card-title">About the article</h2>
     <p class="card-text">Authors: </p>
-    {%for author in article_details.authors.all%}<p class="card-text">
-      <a href="{% url 'app_compare:author_detail' pk=author.pk%}">{{author.name}}</a></p>
+    {%for author in authors%}<p class="card-text">
+      {{author}}</p>
     {% endfor %}
     <p class="card-text">Publication date: {{article_details.creation_date}}</p>
     <p class="card-text">Total number of citations: {{article_details.citation_count}}</p>
     <p class="card-text">Keywords:
-      {%for tag in article_details.tags.all%}
-      {{tag.nametag}}
+      {%for tag in tags%}
+      {{tag}}
       {% endfor %}
        <a href="{% url 'app_compare:graph'%}">(What is this?)</a></p>
 

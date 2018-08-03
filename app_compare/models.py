@@ -1,96 +1,60 @@
 from django.db import models
-from django.contrib.postgres.fields import ArrayField
-from collections import Counter
+import os.path as opa
+import pandas as pd
+import suggestions_graphs
 # Create your models here.
 
-class Author(models.Model):
 
 
-    name = models.TextField(blank=True)
+class Adj_list(models.Model):
+    recid = models.TextField(blank=True)
+    adj_list = models.TextField(blank=True)
 
-    def get_tags(self):
-        tags = []
-        for article in self.article_set.all():
-            tags_article = article.tags.all()
-            for tag in tags_article:
-                tags.append(tag.nametag)
-        counted_tags = Counter(tags)
-        sorted_tags = sorted(counted_tags,key=counted_tags.get,reverse=True)
-        tags = sorted_tags
+    def get_list_recid_weights(self):
 
-        return tags
+        list_terms = self.adj_list.split('-')
+        list_tuples = [(int(x.split(', ')[0][1:]),float(x.split(', ')[1][:-1])) for x in list_terms]
 
-    def get_h_index(self):
-        citations = []
-        for article in self.article_set.all():
-            citations.append(article.citation_count)
-        h = 0
-        citations.sort(reverse=True)
-        for citation in citations:
-            if citation >= h + 1:
-                h += 1
-            else:
-                break
-        return h
+        return list_tuples
 
-    def get_tot_citations(self):
-        citations = 0
-        for article in self.article_set.all():
-            citations += article.citation_count
-        return citations
+class Tag_list(models.Model):
+    label = models.TextField(blank=True,unique=True)
+    tag_list = models.TextField(blank=True)
+
+    def get_list_tags_weights(self):
+
+        list_terms = self.tag_list.split('-')
+        list_tuples = [x.split(', ')[0][1:].replace("'",'') for x in list_terms]
+
+        return list_tuples
 
 
-
-    def get_number_article(self):
-
-        return len(self.article_set.all())
-
-    def get_avg_citations(self):
-        citations = 0
-        for article in self.article_set.all():
-            citations += article.citation_count
-        return '{:.2f}'.format(float(citations)/len(self.article_set.all()))
-
-
-    def __str__(self):
-        return self.name
-
-class Suggestions(models.Model):
-        title = models.TextField(blank=True)
-        recid = models.TextField(blank=True)
-        slug = models.SlugField(blank=True)
-        label = models.IntegerField(blank=True)
-        strength = models.FloatField(blank=True)
-        citation_count = models.IntegerField(blank=True)
-        creation_date = models.TextField(blank=True)
-        def get_inspire_link(self):
-            return "https://inspirehep.net/record/"+self.recid
-
-        def __str__(self):
-            return self.title
-
-class Tags(models.Model):
-    nametag = models.TextField(blank=True)
-    weight = models.FloatField(blank=True,default=1)
-    label =  models.TextField(blank=True,default=1)
-
-    def __str__(self):
-        return self.nametag
 
 
 class Article(models.Model):
 
+
     title = models.TextField(blank=True)
-    label = models.IntegerField(blank=True)
-    authors = models.ManyToManyField(Author)
+    label = models.TextField(blank=True)
     creation_date = models.TextField(blank=True)
     recid = models.TextField(blank=True)
+    authors = models.TextField(blank=True)
     citation_count = models.IntegerField(blank=True)
     abstract = models.TextField(blank=True)
-    suggestion = models.ManyToManyField(Suggestions)
-    tags = models.ManyToManyField(Tags)
     slug = models.SlugField(blank=True)
     arXiv_link = models.TextField(blank=True)
+
+    def get_list_authors(self):
+        list_authors = self.authors.split('-')
+        return list_authors
+
+    # def get_recommendations(self,df_adjacency_matrix,nrecommendations=15):
+    #
+    #     return suggestions_graphs.get_recommendation(self.recid,df_adjacency_matrix,nrecommendations=nrecommendations)
+    #
+    # def get_tags(self,most_frequentwords_dict):
+    #     listags = [tag for tag,_ in most_frequentwords_dict[self.label]]
+    #     return listags
 
 
     def get_inspire_link(self):

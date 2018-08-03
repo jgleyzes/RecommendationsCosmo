@@ -94,27 +94,32 @@ def get_adjacency_matrix_label(adjacency_matrix,df_label):
     labels = list(dict_cluster_id.keys())
     nlabels = len(labels)
 
+    total_size = df_label.shape[0]
+
+    df_groupedby_label = df_label.groupby('Label')
+    size_groups = df_groupedby_label['title'].apply(np.size)
+
     adjacency_matrix_label = np.zeros((nlabels,nlabels))
 
     for i in range(nlabels):
-        indices = np.array(dict_cluster_id[labels[i]])
+            indices = np.array(dict_cluster_id[labels[i]])
 
-        #Need to put the indices in right shape to keep the matrix shape
+            #Need to put the indices in right shape to keep the matrix shape
 
-        indices_left = put_indice_shape_LR(indices,'L')
-        indices_right = put_indice_shape_LR(indices,'R')
-
-        adjacency_matrix_label[i,i] = get_mean_adjacency_matrix(adjacency_matrix,indices_left,indices_right)
-
-        for j in range(i):
-            indices = np.array(dict_cluster_id[labels[j]])
+            indices_left = put_indice_shape_LR(indices,'L')
             indices_right = put_indice_shape_LR(indices,'R')
 
-            adjacency_matrix_label[i,j] = get_mean_adjacency_matrix(adjacency_matrix,indices_left,indices_right)
+            adjacency_matrix_label[i,i] = get_mean_adjacency_matrix(adjacency_matrix,indices_left,indices_right)
 
-            #matrix is symmetric
+            for j in range(i):
+                indices = np.array(dict_cluster_id[labels[j]])
+                indices_right = put_indice_shape_LR(indices,'R')
 
-            adjacency_matrix_label[j,i] = get_mean_adjacency_matrix(adjacency_matrix,indices_left,indices_right)
+                adjacency_matrix_label[i,j] = get_mean_adjacency_matrix(adjacency_matrix,indices_left,indices_right)
+
+                #matrix is symmetric
+
+                adjacency_matrix_label[j,i] = get_mean_adjacency_matrix(adjacency_matrix,indices_left,indices_right)
 
     adjacency_matrix_label = adjacency_matrix_label/adjacency_matrix_label.max()
 
@@ -151,7 +156,7 @@ def get_info_topcitation(label,df_label,nmostcited=3):
 
 
 
-def graph_to_json(adjacency_matrix,df_label,most_frequentwords_dict,nmostcited=3):
+def graph_to_json(adjacency_matrix,df_label,most_frequentwords_dict,nmostcited=3,threshold_percent=0.05):
 
     """
     Compute the json-type structure for the nodes and links of the d3.js force-directed graph.
@@ -163,6 +168,7 @@ def graph_to_json(adjacency_matrix,df_label,most_frequentwords_dict,nmostcited=3
     df_label: the dataframe with all the information on the articles, in particular the labels
     most_frequentwords_dict: dictionary which contains the most frequent words for each label
     mostcited: number of most cited records to keep. Default is 3.
+    threshold_percent: keeps groups whose size are larger than threshold_percent*total_size
 
     Output:
     ------
@@ -179,43 +185,49 @@ def graph_to_json(adjacency_matrix,df_label,most_frequentwords_dict,nmostcited=3
     df_groupedby_label = df_label.groupby('Label')
     size_groups = df_groupedby_label['title'].apply(np.size)
 
-
+    total_size = df_label.shape[0]
     adjacency_matrix_label = get_adjacency_matrix_label(adjacency_matrix,df_label)
 
-    #get the min-max distance to normalize adjacency_matrix_label between 0 and 1
+    #get the min-max distance to normalize adjacency_matrix_label (reduced to the groups large enough) between 0 and 1
 
-    min_distance = adjacency_matrix_label[adjacency_matrix_label>0].min()
+    labels_red = size_groups[size_groups>threshold_percent*total_size].index.values
+    adjacency_matrix_label_red = adjacency_matrix_label[labels_red.reshape((1,-1)).astype(int),labels_red.reshape((-1,1)).astype(int)]
 
-    max_distance = adjacency_matrix_label[adjacency_matrix_label>0].max()
+    min_distance = adjacency_matrix_label_red[adjacency_matrix_label_red>0].min()
+
+    max_distance = adjacency_matrix_label_red[adjacency_matrix_label_red>0].max()
 
 
 
     for i in range(nlabels):
 
         label = labels[i]
-        most_frequentwords = most_frequentwords_dict[label]
+        if size_groups.loc[label] > threshold_percent*total_size:
+            most_frequentwords = most_frequentwords_dict[label]
 
-        #get the min-max weight to normalize weigths
-        weigths = np.array([float(weight) for _,weight in most_frequentwords])
+            #get the min-max weight to normalize weigths
+            weigths = np.array([float(weight) for _,weight in most_frequentwords])
 
-        minweight = weigths[weigths>0].min()
+            minweight = weigths[weigths>0].min()
 
-        maxweight = weigths[weigths>0].max()
+            maxweight = weigths[weigths>0].max()
+            if minweight == maxweight:
+                dictinfo = [{'text':word,'size':1.} for word,weight in most_frequentwords]
+            else:
+                dictinfo = [{'text':word,'size':(weight-minweight)/(maxweight-minweight)+0.5} for word,weight in most_frequentwords]
+            size = int(size_groups[label])
 
-        dictinfo = [{'text':word,'size':(weight-minweight)/(maxweight-minweight)+0.5} for word,weight in most_frequentwords]
-        size = int(size_groups[label])
+            infotopncited = get_info_topcitation(label,df_label,nmostcited=nmostcited)
 
-        infotopncited = get_info_topcitation(label,df_label,nmostcited=nmostcited)
+            node = {'id':i,'info':dictinfo,'group':labels[i],'size':size,'infotopn':infotopncited}
+            datajsonlabel['nodes'].append(node)
 
-        node = {'id':i,'info':dictinfo,'group':labels[i],'size':size,'infotopn':infotopncited}
-        datajsonlabel['nodes'].append(node)
+            for j in range(0,i):
+                if adjacency_matrix_label[i,j]>0 and size_groups.loc[labels[j]] > threshold_percent*total_size:
 
-        for j in range(0,i):
-            if adjacency_matrix_label[i,j]>0:
-
-                value = int(round(30*(adjacency_matrix_label[i,j]-min_distance)/(max_distance-min_distance)))
-                link = {'source':i,'target':j,"value":value}
-                datajsonlabel['links'].append(link)
+                    value = int(round(30*(adjacency_matrix_label[i,j]-min_distance)/(max_distance-min_distance)))
+                    link = {'source':i,'target':j,"value":value}
+                    datajsonlabel['links'].append(link)
 
     with open(os.path.join(THIS_PATH,'data/datalabels.json'), 'w') as fp:
          json.dump(datajsonlabel, fp)

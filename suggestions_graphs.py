@@ -11,6 +11,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer,CountVectorizer
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import TruncatedSVD
 import gensim
+from gensim.models.phrases import Phrases, Phraser
 from collections import defaultdict
 from nltk.corpus import stopwords
 import nltk
@@ -39,7 +40,7 @@ remove_numbers = dict((ord(char), None) for char in string.punctuation)
 
 def get_df_nouns_only(entry):
     """
-    1) Remove terms with digits as well as terms with latex tags.
+    1) Removes terms with digits as well as terms with latex tags.
     2) Retains only the nouns from the abstract using nltk.pos_tag.
 
     Input:
@@ -107,6 +108,38 @@ def get_mean_vectors_idf(X,word2vec,tfidf):
                 for words in X
             ])
 
+def prepare_entry_text_split(entry):
+
+    """
+    Applies various cleaning method to a string contained in entry:
+    - removes Latex commands
+    - puts in lowercase
+    - removes punctuation and remove_numbers
+    - decode Unicode
+    - splits into tokens
+    - removes stopwords
+
+    Input:
+    -----
+    An entry
+
+    Output:
+
+    The cleaned string
+    """
+    motif = re.compile('\$(.*?)\$')
+    entry = unidecode.unidecode(motif.sub('',entry.replace(r'<inline-formula>.*?</inline-formula>',''))\
+                                .lower()\
+                                .translate(remove_punctuation)\
+                                .translate(remove_numbers)\
+                                .replace('\W\w\W',''))\
+                                .split()
+
+
+    tokens = [w for w in entry if not w in stop_words]
+
+    return tokens
+
 
 def prepare_series_text_split(series):
 
@@ -128,14 +161,7 @@ def prepare_series_text_split(series):
     The cleaned series
     """
 
-    series_text = series.str.replace(r'<inline-formula>.*?</inline-formula>','')\
-                                .str.lower()\
-                                .str.translate(remove_punctuation)\
-                                .str.translate(remove_numbers)\
-                                .str.replace('\W\w\W','')\
-                                .map(lambda x:unidecode.unidecode(x))\
-                                .str.split()\
-                                .map(lambda entry: [w for w in entry if not w in stop_words])
+    series_text = series.apply(prepare_entry_text_split)
 
     lengthvectors = np.array([len(x) for x in series_text])
 
@@ -163,7 +189,7 @@ def get_highest_idf_words_title(df_label,ntopics=5):
     df_grouped = df_label.groupby(['Label']).agg({'title':' '.join})
     df_joined = prepare_series_text_split(df_grouped['title']).map(' '.join)
 
-    tfidf = TfidfVectorizer(min_df=.009, max_df=0.8, stop_words='english', ngram_range=(1,1))
+    tfidf = TfidfVectorizer(min_df=.02, max_df=0.9, stop_words='english', ngram_range=(2,3))
     transformed_corpus = tfidf.fit_transform(df_joined)
     tvocab = np.array(tfidf.get_feature_names())
     df_transformed = pd.DataFrame(transformed_corpus.todense(), columns=tvocab,index=df_joined.index)
@@ -184,18 +210,21 @@ def prepare_vector(df):
 
     df_text_abstract_split = prepare_series_text_split(df['abstract'])
 
+    phrases = Phrases(df_text_abstract_split)
+    bigram = Phraser(phrases)
+    listsentences = df_text_abstract_split.values.tolist()
     model = gensim.models.Word2Vec(df_text_abstract_split, size=128, window=8, min_count=1, workers=4)
-    model.train(df_text_abstract_split,total_examples=len(df_text_abstract_split),epochs=10)
+    model.train(bigram[listsentences],total_examples=len(df_text_abstract_split),epochs=10)
     word2vec = model.wv
 
     tvec_full = TfidfVectorizer(analyzer='word',
-                                tokenizer=dummy_fun,
-                                preprocessor=dummy_fun,
-                                token_pattern=None,min_df=.0025, max_df=0.4)
+                                    tokenizer=dummy_fun,
+                                    preprocessor=dummy_fun,
+                                    token_pattern=None,min_df=.0025, max_df=0.4)
 
-    tvec_full.fit(df_text_abstract_split)
+    tvec_full.fit(bigram[listsentences])
 
-    idf_weighted_vectors = get_mean_vectors_idf(df_text_abstract_split,word2vec,tvec_full)
+    idf_weighted_vectors = get_mean_vectors_idf(bigram[listsentences],word2vec,tvec_full)
 
     df_vectorized = pd.DataFrame(idf_weighted_vectors, index=df_text_abstract_split.index)
 
@@ -306,7 +335,7 @@ def get_adjacency_matrix(cosine_distance_matrix,p=95):
 
 
 
-def get_clusters(df,inflation=1.05,p=95,ntopics=5):
+def get_clusters(df,inflation=1.7,p=95,ntopics=5):
     """
     Takes as an input the dataframe containing articles with their abstract, vectorize it,
     then returns the label as well as coordinates of the clusters centers.
@@ -337,6 +366,8 @@ def get_clusters(df,inflation=1.05,p=95,ntopics=5):
 
     adjacency_matrix = get_adjacency_matrix(cosine_distance_matrix,p=p)
 
+    df_adjacency_matrix = pd.DataFrame(adjacency_matrix,columns=df_label.index,index=df_label.index)
+
     G = nx.from_numpy_matrix(adjacency_matrix)
 
     matrix = nx.to_scipy_sparse_matrix(G)
@@ -352,21 +383,20 @@ def get_clusters(df,inflation=1.05,p=95,ntopics=5):
 
     most_frequentwords_dict = get_highest_idf_words_title(df_label,ntopics=ntopics)
 
-    return adjacency_matrix,df_vectorized,df_label,most_frequentwords_dict
+    return df_adjacency_matrix,df_vectorized,df_label,most_frequentwords_dict
 
 
 
-def get_recommendation(recid,adjacency_matrix,df_label,nrecommendations=15):
+def get_recommendation(recid,df_adjacency_matrix,nrecommendations=15):
 
     """
-    For a given article (identified by its recid), find the nrecommendations in its cluster that are the closest
+    For a given article (identified by its recid), find the nrecommendations articles that are the closest
     according to their cosine distance.
 
     Inputs:
     ------
     recid: the identifier of the article
-    adjacency_matrix: the adjacency matrix which contains all the distances
-    df_label: the dataframe containing the data for the articles and their label
+    df_adjacency_matrix: the adjacency matrix which contains all the distances as a dataframe with index and columns given by recids.
     nrecommendations: the number of words to represent each cluster
 
     Output:
@@ -375,12 +405,10 @@ def get_recommendation(recid,adjacency_matrix,df_label,nrecommendations=15):
 
     """
 
-    indextorecid = df_label.index.values
 
-    index_article = np.argwhere(indextorecid==recid)[0][0]
+    column_article = df_adjacency_matrix.loc[recid].sort_values(ascending=False)
 
-    column_article = adjacency_matrix[index_article]
 
-    recommendations = list(zip(indextorecid[column_article.argsort()[::-1]][:nrecommendations],column_article[column_article.argsort()[::-1]][:nrecommendations]))
+    recommendations = list(zip(column_article.index.values[:nrecommendations],column_article.values[:nrecommendations]))
 
     return recommendations

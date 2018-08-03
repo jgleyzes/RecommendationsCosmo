@@ -1,17 +1,22 @@
 import datetime
 from haystack import indexes
-from app_compare.models import Article,Author
+from app_compare.models import Article
+import suggestions_graphs
 
 
 class ArticleIndex(indexes.SearchIndex, indexes.Indexable):
     text = indexes.CharField(document=True, use_template=True)
     title = indexes.CharField(model_attr='title')
-    abstract = indexes.CharField(model_attr='abstract')
+    cleanabs = indexes.CharField(model_attr='abstract')
     creation_date = indexes.CharField(model_attr='creation_date')
     authors = indexes.CharField()
 
     def prepare_authors(self, obj):
-            return [ author.name for author in obj.authors.all()]
+            return [ author for author in obj.get_list_authors()]
+
+    def prepare_cleanabs(self,obj):
+
+        return suggestions_graphs.prepare_entry_text_split(obj.abstract)
 
     def get_model(self):
         return Article

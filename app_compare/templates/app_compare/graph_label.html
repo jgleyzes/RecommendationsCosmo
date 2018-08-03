@@ -82,7 +82,7 @@ By clicking on the circle, you can see more information about the group, such as
               })
               .strength(0.015))
               // push nodes apart to space them out
-              .force("charge", d3.forceManyBody().strength(-700))
+              .force("charge", d3.forceManyBody().strength(-1300))
               // add some collision detection so they don't overlap
               .force("collide", d3.forceCollide().radius(5))
               // and draw them around the centre of the space
@@ -101,7 +101,7 @@ By clicking on the circle, you can see more information about the group, such as
                   .enter()
                   .append("path")
                   .attr("class", "link")
-                  .style("stroke-width", function(d) { return 2*(d.value+3)*(d.value+3); })
+                  .style("stroke-width", function(d) { return 2*(4*d.value+3); })
                   .style('stroke', "#ddd");
 
               // add the nodes to the graphic
@@ -156,7 +156,7 @@ By clicking on the circle, you can see more information about the group, such as
                   }
                 function sizetext(size){
                   if (size <= 0 ) {return 0}
-                  else {return (5*size+10)+"px"}
+                  else {return (10*size+15)+"px"}
                 }
               // Variable to keep track of whether node has been clicked
               var tip;

@@ -7,7 +7,7 @@ import django
 # Import settings
 django.setup()
 
-from app_compare.models import Author,Article,Suggestions,Tags
+from app_compare.models import Article,Adj_list,Tag_list
 import suggestions_graphs
 import graphdata
 import requests
@@ -15,6 +15,7 @@ import pandas as pd
 import numpy as np
 import unidecode
 import scipy
+import pickle
 from haystack.management.commands import update_index
 
 """
@@ -26,6 +27,12 @@ Finally, using the graphdata module, we create a JSON file which describes the g
 which will allow use to give its interactive representation using the D3.js javascript library.
 
 """
+
+
+def list_tuples_to_str(arr):
+
+    str_sug = '-'.join([str(x) for x in arr])
+    return str_sug
 
 
 
@@ -255,7 +262,9 @@ def prepare_df_clean(df):
     df_final['abstract'] = df_final['abstract'].apply(get_abstract_entry)
     return df_final
 
-def fill_Django_DB(entry,adjacency_matrix,df_label,most_frequentwords_dict,nrecommendations=15):
+
+
+def fill_Article_DB(entry,df_adjacency_matrix,df_label,nrecommendations=15):
 
     """
     Fills the django database with entry
@@ -263,9 +272,7 @@ def fill_Django_DB(entry,adjacency_matrix,df_label,most_frequentwords_dict,nreco
     Input:
     -----
     entry: the row of the dataframe to put in the database
-    adjacency_matrix: the adjacency matrix which will allow us to choose recommendations
-    df_label: the full dataframe containing with articles and their label (this is where the recommendations will be fetched)
-    most_frequentwords_dict: the dictionary with keywords for each label.
+    df_adjacency_matrix: a dataframe representing the full adjacency matrix
 
 
     """
@@ -284,7 +291,6 @@ def fill_Django_DB(entry,adjacency_matrix,df_label,most_frequentwords_dict,nreco
     abstract = entry['abstract']
 
     label = entry['Label']
-    most_frequentwords = most_frequentwords_dict[int(label)]
 
     try:
         arXiv_number =  get_arXiv_number_entry(entry)
@@ -296,70 +302,54 @@ def fill_Django_DB(entry,adjacency_matrix,df_label,most_frequentwords_dict,nreco
 
     full_title = add_nameanddate_title(list_authors,creation_date,title)
 
+    authors = '-'.join(list_authors)
+
     # Fills database entry corresponding to a given recid. If existing, updates the fields.
 
     new_article = Article.objects.get_or_create(recid=recid,defaults={'title':full_title,'abstract':abstract,
                                                'creation_date':creation_date,'citation_count':citation_count,'arXiv_link':arXiv_link,
-                                               'slug':recid,'label':label}
+                                               'slug':recid,'label':label,'authors':authors}
                                                )[0]
-
-
-    # Cleans old existing suggestions and tags
-
-    new_article.suggestion.clear()
-    new_article.tags.clear()
-
-    # Attributes tag (most frequent words for each cluster) to the article
-    for tag,weight in most_frequentwords:
-        if weight > 0:
-            new_tag = Tags.objects.get_or_create(nametag=tag,defaults={'weight':weight,'label':label})[0]
-            new_tag.save()
-            new_article.tags.add(new_tag)
-
-
-    # Attributes authors to the article
-    for author in list_authors:
-        new_author = Author.objects.get_or_create(name=author)[0]
-        new_author.save()
-        new_article.authors.add(new_author)
-        new_author.article_set.add(new_article)
-
-    # Get the suggestions for a given article
-    list_suggestions = suggestions_graphs.get_recommendation(recid,adjacency_matrix,df_label,nrecommendations=nrecommendations)
-
-
-    # Attributes suggestions with their strength to the article, retaining the nrecommendations articles closest to
-    # the one at hand according to their cosine distance in the vectorized space, provided they are close enough.
-
-    for suggestion,strength in list_suggestions:
-        entry_sug = df_label.loc[suggestion]
-        try:
-             title_sug = entry_sug['title']
-        except:
-            print('Error with recid %s' %recid)
-        creation_date_sug = entry_sug['creation_date'][:10]
-        label_sug = entry_sug['Label']
-        list_authors_sug = get_authors_names_entry(entry_sug['authors'])
-        citation_count_sug = entry_sug['number_of_citations']
-
-        full_title_sug = add_nameanddate_title(list_authors_sug,creation_date_sug,title_sug)
-
-        new_suggestion = Suggestions.objects.get_or_create(recid=suggestion,strength=strength,defaults={'title':full_title_sug,
-                                                   'slug':suggestion,'label':label_sug,'citation_count':citation_count_sug})[0]
-        new_suggestion.save()
-
-        # Creates manytomany relation
-        new_article.suggestion.add(new_suggestion)
-        new_suggestion.article_set.add(new_article)
-
-
     new_article.save()
 
+    # Fills the corresponding entry in the adjacency list
 
-def main(nmostcited=3,nrecommendations=15):
+    list_suggestions = suggestions_graphs.get_recommendation(recid,df_adjacency_matrix,nrecommendations=nrecommendations)
+
+    str_sug = list_tuples_to_str(list_suggestions)
+
+    new_sug = Adj_list.objects.get_or_create(recid=recid,defaults={'adj_list':str_sug})[0]
+    new_sug.save()
+
+def fill_tags_DB(most_frequentwords_dict):
+
+    """
+    Fills the django database with entry
+
+    Input:
+    -----
+    most_frequentwords_dict
+
+
+    """
+    for label in most_frequentwords_dict:
+        str_tag = list_tuples_to_str(most_frequentwords_dict[label])
+        new_tags = Tag_list.objects.get_or_create(label=label,defaults={'tag_list':str_tag})[0]
+        new_tags.save()
+
+def main(nrecommendations=15,inflation=1.7,threshold_percent=0.05,nmostcited=3,ntopics=5):
 
     """
     Combines everything and populates the django database.
+
+    Input:
+    -----
+    nrecommendations : the number of recommendations to give per article
+    inflation: controls the markov clustering (larger values mean more groups)
+    threshold_percent: keeps groups whose size are larger than threshold_percent*total_size
+    nmostcited: for each group will save the nmostcited most cited articles in the group
+    ntopics: for each group, gives the ntopics words most frequent among the titles of said group
+
 
     """
 
@@ -367,6 +357,7 @@ def main(nmostcited=3,nrecommendations=15):
     # We request the fields number_of_citations,authors,title,creation_date,recid,abstract. Recid is a unique id attributed
     # to a given article on inspire.
 
+    t0  = time.time()
 
     URL_BASE = 'http://inspirehep.net/search?p=astro-ph.CO+and+hep-th&of=recjson&ot=number_of_citations,authors,title,creation_date,recid,abstract,system_control_number&'
     response_json,df_res = get_json_to_df(URL_BASE+'&rg=250',df=[])
@@ -392,28 +383,37 @@ def main(nmostcited=3,nrecommendations=15):
     -  most_frequentwords_dict is a dictionary which returns the ntopics most representative words of each cluster
     """
 
-    adjacency_matrix,df_vectorized,df_label,most_frequentwords_dict = suggestions_graphs.get_clusters(df_clean_with_abstract_and_authors)
+    df_adjacency_matrix,df_vectorized,df_label,most_frequentwords_dict = suggestions_graphs.get_clusters(df_clean_with_abstract_and_authors,inflation=inflation,ntopics=ntopics)
+    print('Clusters created!')
 
     df_label = df_label.dropna()
-    print('Clusters created!')
+
 
 
     #Populate the django models
 
-    df_label.apply(lambda x:fill_Django_DB(x,adjacency_matrix,df_label,most_frequentwords_dict,nrecommendations=nrecommendations),axis=1)
+    #objects = [get_bulk_DB(entry) for _,entry in df_label.iterrows()]
+
+    #Article.objects.bulk_create(objects)
+    df_label.apply(lambda x:fill_Article_DB(x,df_adjacency_matrix,df_label,nrecommendations=nrecommendations),axis=1)
+    fill_tags_DB(most_frequentwords_dict)
 
 
-    print('Populating Completed!')
-    update_index.Command().handle()
-    print('Index updated!')
+    print('Populating Completed after %s' %(time.time()-t0))
+
     # Save the graph data to a JSON file to use for plotting
 
-    datajson = graphdata.graph_to_json(adjacency_matrix,df_label,most_frequentwords_dict,nmostcited=nmostcited)
+    datajson = graphdata.graph_to_json(df_adjacency_matrix.values,df_label,most_frequentwords_dict,nmostcited=nmostcited,threshold_percent=threshold_percent)
 
     print('JSON saved!')
+
+    update_index.Command().handle()
+    print('Index updated!')
 
 
 if __name__ == '__main__':
     import time
+    t0 = time.time()
     print('running at ' + time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time())))
     main()
+    print('it took %s seconds to fill the database'%(time.time()-t0))
