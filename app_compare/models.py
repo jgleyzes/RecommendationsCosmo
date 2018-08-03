@@ -1,7 +1,5 @@
 from django.db import models
-import os.path as opa
-import pandas as pd
-import suggestions_graphs
+
 # Create your models here.
 
 
@@ -48,13 +46,6 @@ class Article(models.Model):
         list_authors = self.authors.split('-')
         return list_authors
 
-    # def get_recommendations(self,df_adjacency_matrix,nrecommendations=15):
-    #
-    #     return suggestions_graphs.get_recommendation(self.recid,df_adjacency_matrix,nrecommendations=nrecommendations)
-    #
-    # def get_tags(self,most_frequentwords_dict):
-    #     listags = [tag for tag,_ in most_frequentwords_dict[self.label]]
-    #     return listags
 
 
     def get_inspire_link(self):
