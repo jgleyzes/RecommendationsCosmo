@@ -143,20 +143,20 @@ By clicking on the circle, you can see more information about the group, such as
                   .on("mouseout", mouseOut)
 
 
-                  var i;
+                   var i;
                   for (i = 0; i < nodes[0].info.length; i++) {
                   node.append("text")
 
-                    .attr("dy", (1.7*i+1)+"em")
-                    .attr("dx", 0.5*(1.5*i+4)+"em")
+                    .attr("dy", 12*(2*i+1)+"px")
+                    .attr("dx", 12*(1*i+4)+"px")
                     .text(function(d){return d.info[i].text})
                     .style('font-size',function(d){return sizetext(d.info[i].size)})
-                    .style("fill", function(d){return color(d.group)});
+                    .style("fill", function(d){return color(d.group)})
 
                   }
                 function sizetext(size){
                   if (size <= 0 ) {return 0}
-                  else {return (10*size+15)+"px"}
+                  else {return (14*size+6)+"px"}
                 }
               // Variable to keep track of whether node has been clicked
               var tip;
