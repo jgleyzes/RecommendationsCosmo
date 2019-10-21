@@ -23,7 +23,7 @@ httpretty==0.8.10
 idna==2.6
 jmespath==0.9.3
 mock==2.0.0
-nltk==3.3
+nltk==3.4.5
 numpy==1.14.3
 pandas==0.22.0
 pbr==4.0.2
