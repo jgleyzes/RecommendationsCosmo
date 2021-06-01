@@ -43,7 +43,7 @@ smart-open==1.5.7
 stevedore==1.28.0
 text-unidecode==1.2
 Unidecode==1.0.22
-urllib3==1.22
+urllib3==1.26.5
 virtualenv==15.2.0
 virtualenv-clone==0.3.0
 virtualenvwrapper==4.8.2
